@@ -1,35 +1,32 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-// ������ ����(���� ��� vs ���� ���)�� �����ϴ� �ٽ� �Ŵ����Դϴ�.
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance;
 
-    // ���� ������ ���� ��(���� ���� ��)���� Ȯ���ϴ� ����
     public bool isPlayMode = false;
 
-    // �� ���� ��� ���� ������Ʈ(��, ��ֹ� ��)�� ������ �迭
+    [Header("UI 참조")]
+    public GameObject clearPanel;
+
     private Rigidbody2D[] physicsObjects;
-    // ������Ʈ���� �ʱ� ��ġ�� ȸ������ ������ ����ü �迭
     private Vector3[] initialPositions;
     private Quaternion[] initialRotations;
 
     void Awake()
     {
-        // �̱��� ����: ��𼭵� GameManager.Instance�� ���� �����ϰ� ����
-        if (Instance == null)
-            Instance = this;
-        else
-            Destroy(gameObject);
+        if (Instance == null) Instance = this;
+        else Destroy(gameObject);
     }
 
     void Start()
     {
-        // ���� �ִ� ��� Rigidbody2D ������Ʈ�� ã�� �迭�� ����
+        if (clearPanel != null) clearPanel.SetActive(false);
+        Time.timeScale = 1f;
+
         physicsObjects = FindObjectsByType<Rigidbody2D>(FindObjectsSortMode.None);
 
-        // ������ ���� �ʱ� ��ġ ����� �迭 �ʱ�ȭ
         initialPositions = new Vector3[physicsObjects.Length];
         initialRotations = new Quaternion[physicsObjects.Length];
 
@@ -38,41 +35,54 @@ public class GameManager : MonoBehaviour
             initialPositions[i] = physicsObjects[i].transform.position;
             initialRotations[i] = physicsObjects[i].transform.rotation;
 
-            // ���� �ÿ��� ���� ������ ���� (���� ���)
-            physicsObjects[i].simulated = false;
+            // [수정됨] simulated를 끄지 말고, Kinematic으로 바꿔서 멈춰둡니다.
+            // 이렇게 해야 마우스 클릭(Raycast)이 감지됩니다.
+            physicsObjects[i].bodyType = RigidbodyType2D.Kinematic;
+
+            // 혹시 모를 속도 제거
+            physicsObjects[i].linearVelocity = Vector2.zero;
+            physicsObjects[i].angularVelocity = 0f;
         }
     }
 
-    // UI�� ���� ��ư�� ������ �Լ�
     public void GameStart()
     {
         if (isPlayMode) return;
-
         isPlayMode = true;
+        Time.timeScale = 1f;
 
-        // ��� ������Ʈ�� ���� ������ Ȱ��ȭ
         foreach (var rb in physicsObjects)
         {
-            rb.simulated = true;
+            // [수정됨] 게임 시작 시 다시 Dynamic(일반 물리)으로 변경
+            rb.bodyType = RigidbodyType2D.Dynamic;
         }
 
-        // �÷��̾�(��)���� ���� ���ϴ� ���� ����
         PlayerController.Instance.Shoot();
     }
 
-    // UI�� ���� ��ư�� ������ �Լ�
     public void GameReset()
     {
         isPlayMode = false;
+        Time.timeScale = 1f;
+        if (clearPanel != null) clearPanel.SetActive(false);
 
-        // ��ġ�� ���� ���� �ʱ�ȭ
         for (int i = 0; i < physicsObjects.Length; i++)
         {
             physicsObjects[i].transform.position = initialPositions[i];
             physicsObjects[i].transform.rotation = initialRotations[i];
+
             physicsObjects[i].linearVelocity = Vector2.zero;
             physicsObjects[i].angularVelocity = 0f;
-            physicsObjects[i].simulated = false;
+
+            // [수정됨] 리셋 시 다시 Kinematic으로 고정
+            physicsObjects[i].bodyType = RigidbodyType2D.Kinematic;
         }
+    }
+
+    public void StageClear()
+    {
+        Debug.Log("Game Clear Logic Executed");
+        if (clearPanel != null) clearPanel.SetActive(true);
+        Time.timeScale = 0f;
     }
 }

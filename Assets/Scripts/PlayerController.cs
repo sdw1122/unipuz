@@ -10,6 +10,7 @@ public class PlayerController : MonoBehaviour
 
     [Header("참조")]
     public Transform arrowTransform; // 힘의 방향을 표시할 화살표 오브젝트
+    public GameObject arrowObject;    // 화살표 오브젝트 전체
     private Rigidbody2D rb;
 
     void Awake()
@@ -23,6 +24,7 @@ public class PlayerController : MonoBehaviour
         // 게임이 시작되지 않았을 때(편집 모드)만 화살표 회전 가능
         if (!GameManager.Instance.isPlayMode)
         {
+            arrowObject.SetActive(true); // 편집 모드에서만 화살표 보이기
             RotateArrow();
         }
     }
@@ -49,5 +51,6 @@ public class PlayerController : MonoBehaviour
             Vector2 forceDirection = arrowTransform.right;
             rb.AddForce(forceDirection * power, ForceMode2D.Impulse);
         }
+        arrowObject.SetActive(false); // 발사 후 화살표 숨김
     }
 }
