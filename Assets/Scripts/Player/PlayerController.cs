@@ -13,7 +13,6 @@ public class PlayerController : PhysicsObjectBase
     public Transform arrowTransform;   // 화살표 (방향/크기 표시)
     public SpriteRenderer arrowSprite; // 화살표 이미지 (크기 조절용)
 
-    // private Rigidbody2D rb; // [삭제] 부모 클래스(PhysicsObjectBase)에 이미 rb가 있으므로 제거
 
     private Vector2 startPoint;
     private Vector2 currentPoint;
