@@ -4,13 +4,15 @@ using UnityEngine.SceneManagement;
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance;
-
     public bool isPlayMode = false;
 
     [Header("UI 참조")]
     public GameObject clearPanel;
 
-    private Rigidbody2D[] physicsObjects;
+    // [변경됨] 자식 클래스가 아닌 부모 클래스(Base) 배열로 선언
+    private PhysicsObjectBase[] physicsObjects;
+
+    // 초기 상태 저장용 구조체나 배열
     private Vector3[] initialPositions;
     private Quaternion[] initialRotations;
 
@@ -25,7 +27,8 @@ public class GameManager : MonoBehaviour
         if (clearPanel != null) clearPanel.SetActive(false);
         Time.timeScale = 1f;
 
-        physicsObjects = FindObjectsByType<Rigidbody2D>(FindObjectsSortMode.None);
+        // [핵심 변경] 씬에 있는 모든 PhysicsObjectBase(자식들 포함)를 다 찾음
+        physicsObjects = FindObjectsByType<PhysicsObjectBase>(FindObjectsSortMode.None);
 
         initialPositions = new Vector3[physicsObjects.Length];
         initialRotations = new Quaternion[physicsObjects.Length];
@@ -35,13 +38,12 @@ public class GameManager : MonoBehaviour
             initialPositions[i] = physicsObjects[i].transform.position;
             initialRotations[i] = physicsObjects[i].transform.rotation;
 
-            // [수정됨] simulated를 끄지 말고, Kinematic으로 바꿔서 멈춰둡니다.
-            // 이렇게 해야 마우스 클릭(Raycast)이 감지됩니다.
-            physicsObjects[i].bodyType = RigidbodyType2D.Kinematic;
+            var rb = physicsObjects[i].GetComponent<Rigidbody2D>();
 
-            // 혹시 모를 속도 제거
-            physicsObjects[i].linearVelocity = Vector2.zero;
-            physicsObjects[i].angularVelocity = 0f;
+            // 일단 모두 멈춤 상태로 시작
+            rb.bodyType = RigidbodyType2D.Kinematic;
+            rb.linearVelocity = Vector2.zero;
+            rb.angularVelocity = 0f;
         }
     }
 
@@ -51,13 +53,19 @@ public class GameManager : MonoBehaviour
         isPlayMode = true;
         Time.timeScale = 1f;
 
-        foreach (var rb in physicsObjects)
+        // 저장해둔 리스트 순회
+        foreach (var obj in physicsObjects)
         {
-            // [수정됨] 게임 시작 시 다시 Dynamic(일반 물리)으로 변경
+            // [중요] '고정됨(isStatic)'이 체크된 물체(벽, 바닥 등)는 떨어지면 안 됨!
+            if (obj.isStatic) continue;
+            if (obj.CompareTag("Player")) continue;
+            // 고정되지 않은 물체만 물리 연산 시작
+            var rb = obj.GetComponent<Rigidbody2D>();
             rb.bodyType = RigidbodyType2D.Dynamic;
         }
 
-        PlayerController.Instance.Shoot();
+        // 플레이어 발사 준비
+        PlayerController.Instance.SetReadyToShoot(true);
     }
 
     public void GameReset()
@@ -68,14 +76,16 @@ public class GameManager : MonoBehaviour
 
         for (int i = 0; i < physicsObjects.Length; i++)
         {
+            // 위치/회전 복구
             physicsObjects[i].transform.position = initialPositions[i];
             physicsObjects[i].transform.rotation = initialRotations[i];
 
-            physicsObjects[i].linearVelocity = Vector2.zero;
-            physicsObjects[i].angularVelocity = 0f;
+            var rb = physicsObjects[i].GetComponent<Rigidbody2D>();
+            rb.linearVelocity = Vector2.zero;
+            rb.angularVelocity = 0f;
 
-            // [수정됨] 리셋 시 다시 Kinematic으로 고정
-            physicsObjects[i].bodyType = RigidbodyType2D.Kinematic;
+            // 다시 Kinematic으로 고정 (편집 모드 상태)
+            rb.bodyType = RigidbodyType2D.Kinematic;
         }
     }
 
